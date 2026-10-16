@@ -1,6 +1,6 @@
 # Local verification — 2026-10-23
 
-The final `./mvnw clean verify` completed with **BUILD SUCCESS: 44 unit tests and 53 integration tests, with zero failures, errors, or skips**. Integration tests used an actual PostgreSQL container. This records local checks, not a GitHub Actions result.
+The local `./mvnw clean verify` completed with **BUILD SUCCESS: 44 unit tests and 53 integration tests, with zero failures, errors, or skips**. Integration tests used an actual PostgreSQL container. The table below records local checks; GitHub Actions results are recorded separately at the end.
 
 ## Environment
 
@@ -16,6 +16,7 @@ The final `./mvnw clean verify` completed with **BUILD SUCCESS: 44 unit tests an
 | `./mvnw --batch-mode clean verify` with Java 21 and the rootless Docker socket | Passed in 59.805 seconds. Surefire: 44 tests; Failsafe: 53 tests. No failures, errors, or skips. |
 | Testcontainers API suite | Started PostgreSQL, applied both Flyway migrations, and exercised real authentication, services, repositories, DB constraints, and owner isolation. |
 | JaCoCo | Generated `target/site/jacoco/index.html` from this clean run, including unit and integration execution data. |
+| Maven Wrapper download verification | The official Maven 3.9.12 ZIP matched its published SHA-512. Its computed SHA-256 was pinned in Wrapper configuration, and `./mvnw --version` passed with a new, empty Wrapper cache. |
 | `docker compose up --build -d` | Passed. The multi-stage image built and ran all 44 unit tests during packaging. PostgreSQL became healthy before the app started; Flyway and Hibernate schema validation succeeded. |
 | Supplementary Compose HTTP/SQL checks | 440 checks passed against port 8080 and the Compose database: authentication, BCrypt storage, CRUD, defaults, filters, pagination, validation, error responses, and two-user isolation including unchanged foreign rows. The app ran as UID 10001. |
 | Container recreation and persistence | Created a disposable account/task, ran `docker compose up -d --force-recreate db app`, and confirmed both container IDs changed. All 18 follow-up checks passed: public user fields and the entire task row survived unchanged, the API was ready, and protected routes still required authentication. Only the disposable persistence fixture was then removed. |
@@ -34,6 +35,10 @@ An existing host PostgreSQL service occupied port 5432. Compose now supports `DB
 
 Earlier development fixes addressed an invalid JWT test fixture, obsolete Jackson 2 enum configuration on Jackson 3, pagination offset overflow, and PostgreSQL timestamp precision. The final complete test run covers those fixes.
 
-## Remaining external check
+## GitHub Actions
 
-Run the GitHub Actions workflow after publishing the repository. No Git remote was configured, no repository was created online, and no push was performed.
+The public repository is [adilzhandev/taskflow](https://github.com/adilzhandev/taskflow). Its [CI workflow](https://github.com/adilzhandev/taskflow/actions/workflows/ci.yml) runs two independent jobs: Maven verification with real PostgreSQL, and an image build followed by Compose HTTP checks. Temporary CI secrets are generated for each job; cleanup removes only that job's disposable Compose project and volume. The existing eight development commits were retained unchanged.
+
+In the [first remote run](https://github.com/adilzhandev/taskflow/actions/runs/39910533052), Maven passed all 44 unit and 53 integration tests with no skips and uploaded the test/coverage artifact. The Compose job exposed a build prerequisite: without `unzip`, Maven Wrapper substituted a tar.gz archive that did not match the pinned ZIP checksum. The Docker build now installs `unzip`, and host prerequisites are documented; checksum verification remains enabled. Actions were also updated to stable Node 24 releases and pinned to their reviewed commit hashes after the runner reported Node 20 deprecation.
+
+The maintained `scripts/compose-smoke.py` checks registration, login, defaults, CRUD, validation, filtering, pagination, and owner isolation. It passed 86 checks against the local Compose app before publication. The live workflow badge and run history show subsequent remote results rather than a static claim that builds always pass.
