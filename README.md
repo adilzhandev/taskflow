@@ -18,7 +18,7 @@ A small Java backend for managing personal tasks. It demonstrates a complete RES
 
 ![TaskFlow Swagger UI running locally](docs/swagger-ui.png)
 
-Actual local run with PostgreSQL, captured on 2026-10-23. The screenshot uses a temporary test port; normal startup uses port 8080.
+Actual TaskFlow run through Docker Compose at `localhost:8080`, captured on 2026-10-23.
 
 ## Stack and compatibility
 
@@ -28,7 +28,7 @@ Versions were checked against the official [Spring Boot requirements](https://do
 
 ## Quick start
 
-You need Docker Engine/Desktop with Docker Compose v2. Docker must be running. The first build needs internet access to download dependencies and images. A host JDK or Maven installation is not required for Compose.
+You need Docker Engine/Desktop with the Docker Compose plugin (`docker compose`). Docker must be running. The first build needs internet access to download dependencies and images. A host JDK or Maven installation is not required for Compose.
 
 From the repository root:
 
@@ -45,9 +45,9 @@ docker compose up --build
 
 After the application logs `Started TaskFlowApplication`, open [Swagger UI](http://localhost:8080/swagger-ui/index.html). The [OpenAPI document](http://localhost:8080/v3/api-docs) is available without a token. Register or log in, copy `accessToken`, click **Authorize**, and paste the token without the `Bearer ` prefix. Swagger adds that prefix.
 
-The app listens on `localhost:8080`; PostgreSQL is exposed on `localhost:5432` for local development. Compose waits for PostgreSQL's healthcheck. Flyway creates the schema, and Hibernate validates it. Data survives `docker compose down` in the `postgres_data` named volume. `docker compose down -v` deletes this project's database; use it only when you intend to reset your demo data.
+The app listens on `localhost:8080`; PostgreSQL is exposed on localhost at `DB_PORT` (5432 by default) for local development. Compose waits for PostgreSQL's healthcheck. Flyway creates the schema, and Hibernate validates it. Data survives `docker compose down` in the `postgres_data` named volume. `docker compose down -v` deletes this project's database; use it only when you intend to reset your demo data.
 
-Changing `DB_PASSWORD` does not change a password already stored in an initialized PostgreSQL volume. Keep the original password or deliberately reset the disposable volume. If a port is occupied, stop the conflicting process or change the host-side port in `compose.yaml`.
+Changing `DB_PASSWORD` does not change a password already stored in an initialized PostgreSQL volume. Keep the original password or deliberately reset the disposable volume. If another database uses port 5432, set `DB_PORT=55432` in `.env`. The app inside Compose still connects to `db:5432`. For host/IDE runs, use the selected host port in `DB_URL`; if port 8080 is occupied, change the app's host-side port in `compose.yaml`.
 
 ### Run from an IDE or terminal
 
@@ -61,7 +61,7 @@ Spring Boot **does not automatically read `.env`**. Set these variables in your 
 
 | Variable | Value |
 | --- | --- |
-| `DB_URL` | `jdbc:postgresql://localhost:5432/taskflow` |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/taskflow` (replace 5432 with your `DB_PORT`) |
 | `DB_USERNAME` | `taskflow` |
 | `DB_PASSWORD` | Your `.env` database password |
 | `JWT_SECRET` | Your generated Base64 signing key |
@@ -72,12 +72,25 @@ For a POSIX terminal, the supplied `.env` format can be loaded explicitly (only 
 set -a
 . ./.env
 set +a
-export DB_URL=jdbc:postgresql://localhost:5432/taskflow
+export DB_URL="jdbc:postgresql://localhost:${DB_PORT:-5432}/taskflow"
 export DB_USERNAME=taskflow
 ./mvnw spring-boot:run
 ```
 
 On Windows use `mvnw.cmd` and set the same variables in the IDE or PowerShell environment. Run the app either in Compose or on the host to avoid occupying port 8080 twice.
+
+### Rootless Docker on Linux
+
+Docker's rootless mode runs the daemon as your own user. If it is installed, start it with `systemctl --user start docker` and select `docker context use rootless`. The CLI must be on your `PATH` (a user installation commonly uses `$HOME/.local/bin`). Keep AppArmor enabled; Ubuntu may require the dedicated RootlessKit profile described in the [official rootless instructions](https://docs.docker.com/engine/security/rootless/).
+
+Before running Maven/Testcontainers against that daemon, point it to the rootless socket:
+
+```sh
+export DOCKER_HOST="$(docker context inspect rootless --format '{{.Endpoints.docker.Host}}')"
+./mvnw clean verify
+```
+
+Java 21 is still required on the host. In an IDE, set `JAVA_HOME`/the project SDK and `DOCKER_HOST` in its test environment as well. No Ryuk, container checks, or integration tests need to be disabled.
 
 ## Tests
 
@@ -197,7 +210,7 @@ Authentication is stateless, with Bearer headers only: no login session, HTTP Ba
 
 ## Scope and next steps
 
-This is a learning project, not a production-ready service. It has no rate limiting, refresh/revocation flow, email verification, password recovery, TLS termination, admin roles, or multi-device logout. Duplicate registration intentionally reveals that an email exists through 409. Pagination uses offsets; concurrent inserts can shift page boundaries. Docker and CI still need to be exercised in your own Docker-enabled environment; see [local verification notes](docs/verification.md) for the checks actually performed during creation.
+This is a learning project, not a production-ready service. It has no rate limiting, refresh/revocation flow, email verification, password recovery, TLS termination, admin roles, or multi-device logout. Duplicate registration intentionally reveals that an email exists through 409. Pagination uses offsets; concurrent inserts can shift page boundaries. Docker Compose, persistence across container recreation, and all 97 Maven tests passed locally; see [local verification notes](docs/verification.md). The GitHub Actions workflow still needs its first run after publishing the repository.
 
 Roadmap ideas: refresh tokens, reminders, and a frontend. They are **not implemented**. The [Russian learning guide](docs/learning-guide.md) includes three smaller exercises you can implement yourself first.
 
