@@ -183,7 +183,7 @@ Authentication is stateless and uses Bearer headers, without login sessions or a
 <details>
 <summary>Run from an IDE or terminal with Java 21</summary>
 
-Select JDK 21 as the project SDK/`JAVA_HOME`. Prepare `.env` as in Quick start, then run `docker compose up -d db`. The Maven Wrapper downloads Maven.
+Select JDK 21 as the project SDK/`JAVA_HOME`. On Linux/macOS, install `unzip` so the Maven Wrapper uses the ZIP archive matching its pinned checksum. Prepare `.env` as in Quick start, then run `docker compose up -d db`. The Maven Wrapper downloads Maven. The Docker build image already includes `unzip`.
 
 Spring Boot **does not automatically read `.env`**. Set these variables in the IDE run configuration:
 

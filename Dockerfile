@@ -1,4 +1,6 @@
 FROM eclipse-temurin:21-jdk-jammy AS build
+# Keep the Wrapper on the ZIP distribution whose SHA-256 is pinned.
+RUN apt-get update && apt-get install -y --no-install-recommends unzip && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
