@@ -4,7 +4,8 @@
 - Keep code beginner-readable: constructor injection, small methods, explicit DTO mapping.
 - Packages: `auth`, `task`, `config`, `common.error` under `com.taskflow`.
 - No Lombok, MapStruct, generic base classes, speculative interfaces, or new infrastructure.
-- Never expose entities, passwords, tokens, SQL, or stack traces in API responses/logs.
+- Never expose entities, passwords, password hashes, SQL, or stack traces in API responses.
+- Return access tokens only from authentication endpoints; never log passwords or tokens.
 - Keep every task query scoped to the authenticated owner; foreign and missing IDs both return 404.
 - Evolve the schema with Flyway; Hibernate must use `ddl-auto=validate`.
 - Add behavior tests with each behavior change. Use real PostgreSQL in API integration tests.

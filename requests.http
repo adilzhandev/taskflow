@@ -1,0 +1,72 @@
+# Copy response values into these local variables before running protected requests.
+# Never commit real tokens. These are placeholders, not usable credentials.
+@baseUrl = http://localhost:8080
+@token = PASTE_ACCESS_TOKEN_FROM_LOGIN_RESPONSE
+@taskId = PASTE_ID_FROM_CREATE_TASK_RESPONSE
+
+### Register (201). Use a new email after the first successful run.
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "student@example.com",
+  "password": "LearningJava42!"
+}
+
+### Login (200). Copy accessToken into @token.
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "student@example.com",
+  "password": "LearningJava42!"
+}
+
+### Create with defaults (201). Copy id into @taskId.
+POST {{baseUrl}}/api/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Prepare for Java interview",
+  "description": "Review transactions"
+}
+
+### Read your task (200)
+GET {{baseUrl}}/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}
+
+### List your tasks (200)
+GET {{baseUrl}}/api/tasks?page=0&size=10
+Authorization: Bearer {{token}}
+
+### Filter by both status and priority (200)
+GET {{baseUrl}}/api/tasks?status=TODO&priority=MEDIUM&page=0&size=10
+Authorization: Bearer {{token}}
+
+### Replace editable fields; omitted description and dueDate are cleared (200)
+PUT {{baseUrl}}/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Prepare for Java interview",
+  "status": "DONE",
+  "priority": "HIGH"
+}
+
+### Invalid title (400)
+POST {{baseUrl}}/api/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "   "
+}
+
+### Unauthenticated (401)
+GET {{baseUrl}}/api/tasks
+
+### Delete your task (204); another GET then returns 404
+DELETE {{baseUrl}}/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}
