@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_DB: taskflow
+      POSTGRES_USER: taskflow
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskflow -d taskflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  app:
+    build: .
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/taskflow
+      DB_USERNAME: taskflow
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Generate JWT_SECRET and set it in .env}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
