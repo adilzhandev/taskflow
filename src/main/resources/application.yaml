@@ -16,7 +16,6 @@ spring:
   jackson:
     deserialization:
       fail-on-unknown-properties: true
-      fail-on-numbers-for-enums: true
     mapper:
       allow-coercion-of-scalars: false
 server:

@@ -57,8 +57,13 @@ public class TaskController {
             @RequestParam(required = false) @Min(1) @Max(50) Integer size,
             HttpServletRequest request) {
         rejectBlankParameters(request);
-        return taskService.list(ownerId(jwt), status, priority,
-                page == null ? 0 : page, size == null ? 10 : size);
+        int requestedPage = page == null ? 0 : page;
+        int requestedSize = size == null ? 10 : size;
+        if ((long) requestedPage * requestedSize > Integer.MAX_VALUE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "The requested pagination offset is too large");
+        }
+        return taskService.list(ownerId(jwt), status, priority, requestedPage, requestedSize);
     }
 
     @GetMapping("/{id}")
