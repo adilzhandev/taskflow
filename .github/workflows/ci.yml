@@ -33,3 +33,35 @@ jobs:
             target/failsafe-reports/
             target/site/jacoco/
           retention-days: 14
+
+  compose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: taskflow-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      DB_PORT: '55432'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate temporary database and JWT secrets
+        shell: bash
+        run: |
+          database_password="$(openssl rand -hex 24)"
+          jwt_secret="$(openssl rand -base64 32)"
+          printf '::add-mask::%s\n' "$database_password" "$jwt_secret"
+          printf 'DB_PASSWORD=%s\nJWT_SECRET=%s\n' "$database_password" "$jwt_secret" >> "$GITHUB_ENV"
+      - name: Build and start Compose services
+        run: docker compose up --build --detach
+      - name: Wait for the HTTP API
+        run: >-
+          curl --fail --silent --show-error
+          --retry 30 --retry-connrefused --retry-all-errors --retry-delay 2
+          --retry-max-time 120 --max-time 5
+          http://127.0.0.1:8080/v3/api-docs --output /dev/null
+      - name: Check authentication, task lifecycle, and owner isolation
+        run: python3 scripts/compose-smoke.py
+      - name: Show container status after a failure
+        if: failure()
+        run: docker compose ps --all
+      - name: Remove this job's containers and disposable database
+        if: always()
+        run: docker compose down --volumes --remove-orphans
